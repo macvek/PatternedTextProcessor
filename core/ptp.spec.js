@@ -3,8 +3,44 @@ let runSpec = require('./run.spec.js')
 
 if (require.main == module) {
     runSpec([
-        checkIndexedSplit
+        checkIndexedSplit,
+        checkArraySplit,
+        applyFlow,
     ]);
+}
+
+function applyFlow(iAm, fail) {
+    iAm('applyFlow');
+    let ptp = new PTP([
+        {'call':'arraySplit', 'key' : '\n'},
+        {'call':'iterateArrayValues', 'array': [
+                {'call':'indexedSplit', 'idx' : 1},
+                {'call':'arrayPick', 'idx' : 1},
+                {'call':'indexedSplit', 'idx' : 1},
+                {'call':'arrayPick', 'idx' : 0}
+            ]
+        }
+        
+    ]);
+
+    let [a,b,c] = ptp.parseInput("XAXX\nXBXX\nXCXX");
+    if ('A' != a, 'B' != b, 'C' != c) {
+        fail(`Failed, expected [A,B,C], but got [${a},${b},${c}]`);
+    }
+}
+
+function checkArraySplit(iAm, fail) {
+    iAm('checkArraySplit');
+    let ptp = new PTP([
+        {'call':'arraySplit',
+         'key' : '\n'}
+    ]);
+
+    let [a,b,c] = ptp.parseInput("A\nB\nC");
+    
+    if ('A' != a, 'B' != b, 'C' != c) {
+        fail(`Failed, expected [A,B,C], but got [${a},${b},${c}]`);
+    }
 }
 
 function checkIndexedSplit(iAm, fail) {

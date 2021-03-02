@@ -40,13 +40,52 @@ class FlowWalker {
         }
 
         switch(op.call) {
-            case'indexedSplit' : {
-                let arg = this.resolve(op, 'idx');
-                return [input.substr(0,arg), input.substr(arg)];
-            }
+            case 'indexedSplit' : return this.indexedSplit(op, input);
+            case 'arraySplit' : return this.arraySplit(op, input);
+            case 'iterateArrayValues': return this.iterateArray(op, input, false);
+            case 'arrayPick': return this.arrayPick(op,input);
             default:
                 throw `Unsupported operation ${op.call}`
         }
+    }
+
+    iterateArray(op, input, toIndexAndValue) {
+        if (!Array.isArray(input)) {
+            throw `Expected input as Array, but got ${input}`;
+        }
+
+        const subject = this.resolve(op, 'array');
+        const ret = [];
+        for (let i=0;i<input.length;i++) {
+            let inputMidvalue = input[i];
+            const trace = [inputMidvalue];
+            for (let subOp of subject) {
+                inputMidvalue = this.callCmd(subOp, inputMidvalue);
+                trace.push(inputMidvalue);
+            }
+
+            ret.push(inputMidvalue);
+        }
+
+        return ret;
+    }
+
+    indexedSplit(op, input) {
+        if (typeof input !== 'string') {
+            throw `indexedSplit expected string, but got ${typeof input}`
+        }
+        let arg = this.resolve(op, 'idx');
+        return [input.substr(0,arg), input.substr(arg)];
+    }
+
+    arraySplit(op, input) {
+        let arg = this.resolve(op, 'key');
+        return input.split(arg);
+    }
+
+    arrayPick(op, input) {
+        let arg = this.resolve(op, 'idx');
+        return input[arg];
     }
 
     resolve(op, argName) {
