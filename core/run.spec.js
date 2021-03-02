@@ -9,6 +9,9 @@ module.exports = ops => {
             each((giveMeName) => {name = giveMeName},
                 (failMessage) => {throw `Failed with message ${failMessage}`}
             );
+            if (!name) {
+                console.trace(`TEST at idx ${counter} has no name provided, please execute first test argument to provide such`);
+            }
             console.log(`${GREEN}[PASSED]${RESET} ${name}`)
             counter++;
         }

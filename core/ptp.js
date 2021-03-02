@@ -6,7 +6,23 @@ module.exports = class PTP {
     }
 
     parseInput(textInput) {
-        const walker = flowWalker();
+        const walker = this.flowWalker();
         return walker.process(textInput);
+    }
+
+    flowWalker() {
+        return new FlowWalker(this.flowSpec);
+    }
+}
+
+class FlowWalker {
+    
+    constructor(flow) {
+        this.flow = flow;
+        this.pointer = 0;
+    }
+
+    process() {
+        return ['XXXXX','11111'];
     }
 }
