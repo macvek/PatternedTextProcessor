@@ -10,8 +10,8 @@ if (require.main == module) {
 function checkIndexedSplit(iAm, fail) {
     iAm('checkIndexedSplit');
     let ptp = new PTP([
-        {'call':'substr',
-         'idx': '5'}
+        {'call':'indexedSplit',
+         'idx': 5}
     ]);
 
     let output = ptp.parseInput("XXXXX11111");
