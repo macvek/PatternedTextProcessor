@@ -1,6 +1,8 @@
 const express = require('express');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
+const PTP = require('./core/ptp');
+
 const app = express();
 const port = 3000;
 const logger = morgan('dev');
@@ -15,7 +17,8 @@ app.get('/', (req, res) => {
 })
 
 app.post('/hello', (req,res) => {
-  answer(res, {'version':'0.1'});
+  let ptp = new PTP();
+  answer(res, {'version':ptp.version});
 });
 
 app.post('/ping', (req,res) => {
