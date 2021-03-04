@@ -1,7 +1,9 @@
 const express = require('express');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
+const fs = require('fs');
 const PTP = require('./core/ptp');
+const { log } = require('console');
 
 const app = express();
 const port = 3000;
@@ -13,7 +15,18 @@ app.use(bodyParser.json())
 app.use('/static',express.static('static_files'));
 
 app.get('/', (req, res) => {
-  res.send('Hello World!');
+  fs.readFile('index.html', (err, content) => { 
+    if (!err) {
+      res.setHeader('Content-Type','text/html');
+      res.status(200);
+      res.send(content);
+    }
+    else {
+      console.error(err);
+      res.status(500);
+      res.send("Error - details in logs");
+    }
+  });
 })
 
 app.post('/hello', (req,res) => {
