@@ -6,10 +6,70 @@ if (require.main == module) {
         checkIndexedSplit,
         checkArraySplit,
         applyFlow,
+        checkIndexOf,
+        checkReturn,
+        checkStorePassesInput,
+        checkStoreReturnsArg,
+        checkPassingArg,
     ]);
 }
 
-function applyFlow(iAm, fail) {
+
+function checkPassingArg(fail) {
+    let ptp = new PTP([
+        {'call':'store', 'key' : '$myVar1', 'source': {'call' : 'indexOf', 'key': 'hello'}},
+        {'call':'indexedSplit', 'idx':'$myVar1'}
+    ]);
+
+    const [welcomeAnd,helloFriend] = ptp.parseInput('Welcome and hello friend');
+    if ('Welcome and ' !== welcomeAnd || 'hello friend' !== helloFriend) {
+        fail(`expected splitted values to match but found 0:${welcomeAnd} & 1:[${helloFriend}`);
+    }
+}
+
+
+function checkStoreReturnsArg(check) {
+    let ptp = new PTP([
+        {'call':'store', 'key' : '$myVar1', 'source': {'call' : 'return', 'key': 'Passed value'}},
+        {'call':'return', 'key' : '$myVar1'}
+    ]);
+
+    check({'assertEquals': ['Passed value', ptp.parseInput('Discarded input')]});
+}
+
+function checkStorePassesInput(check) {
+    let ptp = new PTP([
+        {'call':'store', 'key' : '$myVar1', 'source': {'call' : 'return', 'key': 'Variable value'}},
+    ]);
+
+    check({'assertEquals': ['shouldPass', ptp.parseInput('shouldPass')]});
+    check({'assertEquals': ['Variable value', ptp.lastWalker.variablesStore.get('$myVar1')]});
+}
+
+
+function checkReturn(fail) {
+    let ptp = new PTP([
+        {'call':'return', 'key' : 'This value is returned'},
+    ]);
+
+    const result = ptp.parseInput('This value is discarded');
+    if ('This value is returned' !== result) {
+        fail(`Got ${result}`);
+    }
+}
+
+function checkIndexOf(fail) {
+    let ptp = new PTP([
+        {'call':'indexOf', 'key' : 'hello'}
+    ]);
+
+    const res = ptp.parseInput('hello');
+    if (0 !== res) {
+        fail(`Expected 0 got ${res}`);
+    }
+}
+
+function applyFlow(fail,iAm) {
     iAm('applyFlow');
     let ptp = new PTP([
         {'call':'arraySplit', 'key' : '\n'},
@@ -29,7 +89,7 @@ function applyFlow(iAm, fail) {
     }
 }
 
-function checkArraySplit(iAm, fail) {
+function checkArraySplit(fail,iAm) {
     iAm('checkArraySplit');
     let ptp = new PTP([
         {'call':'arraySplit',
@@ -43,7 +103,7 @@ function checkArraySplit(iAm, fail) {
     }
 }
 
-function checkIndexedSplit(iAm, fail) {
+function checkIndexedSplit(fail,iAm) {
     iAm('checkIndexedSplit');
     let ptp = new PTP([
         {'call':'indexedSplit',
