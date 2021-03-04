@@ -36,8 +36,7 @@ app.post('/hello', (req,res) => {
 
 app.post('/ping', (req,res) => {
   console.log(req.body);
-  res.status(200)
-  res.send(JSON.stringify('ok'));
+  answer(res, {pong:req.body.ping})
 })
 
 

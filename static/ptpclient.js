@@ -12,10 +12,16 @@ async function startPTP() {
     root.appendChild(versionBox);
 
     let ui = new UI();
-    let [sampler, samplerControl] = ui.namedInput('Sampler');
+    let [sampler, samplerCtl] = ui.namedInput('Sampler');
     root.appendChild(sampler);
 
-    let [sendSample, sendSampleCtl] = ui.submitButton('Check sample', samplerControl.input);
+    let [sendSample, sendSampleCtl] = ui.submitButton('Check sample', samplerCtl.input);
+    sendSampleCtl.put('click', async () => {
+        const payload = samplerCtl.value();
+        console.log(`Sending ${payload}`);
+        const resp = await Comm.send('ping', {ping:payload})
+        console.log(`And responed with ${resp.pong}`);
+    })
     root.appendChild(sendSample);
 }
 
@@ -24,17 +30,13 @@ class UI {
         let button = document.createElement('button');
         button.innerText = name;
         
-        let control = {
-            callClick() {
-                console.log('clicked');
-            }
-        }
+        let control = new EventConsumer();
         
-        button.onclick = () => { control.callClick();}
+        const triggeredAction = () => control.trigger('click');
+
+        button.onclick = triggeredAction;
         if (triggerFromInput) {
-            this.bindToEnterPress(triggerFromInput, () => {
-                control.callClick();
-            });
+            this.bindToEnterPress(triggerFromInput, triggeredAction);
         }
 
         return [button, control];
@@ -65,6 +67,22 @@ class UI {
     }
 }
 
+class EventConsumer {
+    constructor() {
+        this.events = new Map();
+    }
+
+    put(eventName, callback) {
+        this.events.set(eventName, callback);
+    }
+
+    trigger(eventName) {
+        let handler = this.events.get(eventName);
+        if (handler) {
+            handler();
+        }
+    }
+}
 
 class Comm {
     static async send(endpoint, payload) {
