@@ -12,7 +12,7 @@ const logger = morgan('dev');
 app.use(logger);
 app.use(bodyParser.json())
 
-app.use('/static',express.static('static_files'));
+app.use('/static',express.static('static'));
 
 app.get('/', (req, res) => {
   fs.readFile('index.html', (err, content) => { 
