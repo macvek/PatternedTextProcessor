@@ -1,5 +1,3 @@
-const e = require("express");
-
 module.exports = class PTP {
     version = 0.1
     
@@ -45,6 +43,10 @@ class FlowWalker {
         }
 
         switch(op.call) {
+            case 'pad': return this.opPad(op, input);
+            case 'upper': return this.opUpper(op, input);
+            case 'lower': return this.opLower(op, input);
+            case 'trim': return this.opTrim(op, input);
             case 'format': return this.opFormat(op, input);
             case 'return': return this.opReturn(op, input);
             case 'store': return this.opStore(op, input);
@@ -57,6 +59,47 @@ class FlowWalker {
                 throw `Unsupported operation ${op.call}`
         }
     }
+
+    opPad(op, input) {
+        const key = this.resolve(op, 'key');
+        const length = this.resolve(op, 'length');
+        const align = this.resolve(op,'align');
+
+        if (input.lenght == length) {
+            return input;
+        }
+
+        if (input.length < length) {
+            const missing = length - input.length;
+            
+            let [left,right] = calcMissingSplit(missing, align);
+            
+            return times(left, key) + input + times(right,key);
+        }
+        else {
+            const overlap = input.length - length;
+            let [left,right] = calcMissingSplit(overlap, align);
+            return input.substr(left, input.length-left-right);
+        }
+
+        function calcMissingSplit(missing, align) {
+            switch (align) {
+                case 'left': return [0,missing];
+                case 'right': return [missing, 0];
+                case 'center': return [ Math.floor(missing/2), Math.ceil(missing/2)];
+                default:
+                    throw `Unsupported align ${align}`;
+            }
+        }
+
+        function times(n, v) {
+            let r = '';
+            for (let i=0;i<n;i++) r+=v;
+            return r;
+        }
+    }
+
+
 
     opFormat(op) {
         const formatKey = this.resolveRaw(op, 'key');
@@ -89,6 +132,18 @@ class FlowWalker {
 
     opReturn(op) {
         return this.resolve(op, 'key');
+    }
+
+    opTrim(op, input) {
+        return input.trim();
+    }
+
+    opUpper(op, input) {
+        return input.toUpperCase();
+    }
+
+    opLower(op, input) {
+        return input.toLowerCase();
     }
 
     opStore(op, input) {

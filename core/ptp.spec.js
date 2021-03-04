@@ -12,7 +12,52 @@ if (require.main == module) {
         checkStoreReturnsArg,
         checkPassingArg,
         checkFormat,
+        checkTrim,
+        checkUpper,
+        checkLower,
+        checkPad,
     ]);
+}
+
+function checkPad(check) {
+    let ptpLeft = new PTP([{call:'pad', key:' ', length:10, align:'left'}]);
+    let ptpRight = new PTP([{call:'pad', key:'X', length:10, align:'right'}]);
+    let ptpCenter = new PTP([{call:'pad', key:' ', length:10, align:'center'}]);
+    let ptpShortLeft = new PTP([{call:'pad', key:' ', length:3, align:'left'}]);
+    let ptpShortRight = new PTP([{call:'pad', key:' ', length:3, align:'right'}]);
+    let ptpShortCenter = new PTP([{call:'pad', key:' ', length:3, align:'center'}]);
+
+    check({assertEquals: ['Hello     ', ptpLeft.parseInput('Hello')]});
+    check({assertEquals: ['XXXXXHello', ptpRight.parseInput('Hello')]});
+    check({assertEquals: ['  Hello   ', ptpCenter.parseInput('Hello')]});
+    check({assertEquals: ['   Hell   ', ptpCenter.parseInput('Hell')]});
+    check({assertEquals: ['Hel', ptpShortLeft.parseInput('Hello')]});
+    check({assertEquals: ['llo', ptpShortRight.parseInput('Hello')]});
+    check({assertEquals: ['Hel', ptpShortCenter.parseInput('Hell')]});
+    check({assertEquals: ['ell', ptpShortCenter.parseInput('Hello')]});
+
+}
+
+
+function checkUpper(fail) {
+    let ptp = new PTP([{'call':'upper'}]);
+    if ('UPPERCASE' !== ptp.parseInput('uppercase')) {
+        fail('Failed to upper');
+    }
+}
+
+function checkLower(fail) {
+    let ptp = new PTP([{'call':'lower'}]);
+    if ('lowercase' !== ptp.parseInput('LowerCase')) {
+        fail('Failed to lower');
+    }
+}
+
+function checkTrim(fail) {
+    let ptp = new PTP([{'call':'trim'}]);
+    if ('Trim Me' !== ptp.parseInput(' Trim Me ')) {
+        fail('Failed to trim');
+    }
 }
 
 function checkFormat(check) {

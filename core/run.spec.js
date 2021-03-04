@@ -33,7 +33,7 @@ module.exports = ops => {
             let expected = check.assertEquals[0];
             let got = check.assertEquals[1];
             if (expected !== got) {
-                throw `check.assertEquals failed expected: ${expected}, given: ${got}`
+                throw `check.assertEquals failed expected:\`${expected}\`, given: \`${got}\``
             }
         }
         else {
