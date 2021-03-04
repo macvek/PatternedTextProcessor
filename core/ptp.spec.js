@@ -11,9 +11,57 @@ if (require.main == module) {
         checkStorePassesInput,
         checkStoreReturnsArg,
         checkPassingArg,
+        checkFormat,
     ]);
 }
 
+function checkFormat(check) {
+    let ptp = new PTP([
+        {'call':'store', 'key': '$first', 'source': {'call': 'return', 'key':'Hello'}},
+        {'call':'store', 'key': '$snd', 'source': {'call': 'return', 'key':'World'}},
+        {'call':'format', 'key': '$first $snd'}
+    ]);
+
+    check({'assertEquals':['Hello World', ptp.parseInput('discarded')]});
+
+    ptp = new PTP([
+        {'call':'store', 'key': '$first', 'source': {'call': 'return', 'key':'Hello'}},
+        {'call':'store', 'key': '$snd', 'source': {'call': 'return', 'key':'World'}},
+        {'call':'format', 'key': '$first$snd'}
+    ]);
+
+    check({'assertEquals':['HelloWorld', ptp.parseInput('discarded')]});
+
+    ptp = new PTP([
+        {'call':'store', 'key': '$first', 'source': {'call': 'return', 'key':'Hello'}},
+        {'call':'store', 'key': '$snd', 'source': {'call': 'return', 'key':'World'}},
+        {'call':'format', 'key': ' $snd$first '}
+    ]);
+
+    check({'assertEquals':[' WorldHello ', ptp.parseInput('discarded')]});
+
+    ptp = new PTP([{'call':'format', 'key': 'No variables'}]);
+    check({'assertEquals':['No variables', ptp.parseInput('discarded')]});
+
+    ptp = new PTP([{'call':'format', 'key': '$$'}]);
+    check({'assertEquals':['$', ptp.parseInput('discarded')]});
+
+    ptp = new PTP([{'call':'format', 'key': '$$$$'}]);
+    check({'assertEquals':['$$', ptp.parseInput('discarded')]});
+
+    ptp = new PTP([{'call':'format', 'key': '$$ $$'}]);
+    check({'assertEquals':['$ $', ptp.parseInput('discarded')]});
+
+    ptp = new PTP([{'call':'format', 'key': '$$variable'}]);
+    check({'assertEquals':['$variable', ptp.parseInput('discarded')]});
+
+    ptp = new PTP([{'call':'format', 'key': 'Var$$'}]);
+    check({'assertEquals':['Var$', ptp.parseInput('discarded')]});
+
+    ptp = new PTP([{'call':'format', 'key': 'Var $$'}]);
+    check({'assertEquals':['Var $', ptp.parseInput('discarded')]});
+
+}
 
 function checkPassingArg(fail) {
     let ptp = new PTP([

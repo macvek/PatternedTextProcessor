@@ -1,3 +1,5 @@
+const e = require("express");
+
 module.exports = class PTP {
     version = 0.1
     
@@ -43,6 +45,7 @@ class FlowWalker {
         }
 
         switch(op.call) {
+            case 'format': return this.opFormat(op, input);
             case 'return': return this.opReturn(op, input);
             case 'store': return this.opStore(op, input);
             case 'indexOf' : return this.opIndexOf(op, input);
@@ -53,6 +56,69 @@ class FlowWalker {
             default:
                 throw `Unsupported operation ${op.call}`
         }
+    }
+
+    opFormat(op) {
+        const formatKey = this.resolveRaw(op, 'key');
+        const chunks = [];
+        let lastIdx = 0;
+        for(;;) {
+            let nextIdx = formatKey.indexOf('$',lastIdx);
+            if (nextIdx == -1) {
+                if (lastIdx < formatKey.length) {
+                    chunks.push(formatKey.substr(lastIdx));
+                }
+                break;
+            }
+            if (nextIdx > lastIdx) {
+                chunks.push(formatKey.substr(lastIdx, nextIdx-lastIdx));
+            }
+
+            let nextStop = findNextStop(formatKey, lastIdx+1);
+
+            let variable = formatKey.substr(nextIdx, nextStop-nextIdx);
+            chunks.push(variable);
+            lastIdx = nextStop;
+        }
+
+        const processed = [];
+        let escape = false;
+        for (var each of chunks) {
+            if (!escape && each.indexOf('$') === 0) {
+                if (each === '$') {
+                    escape = true;
+                    continue;
+                }
+                let expectedString = this.pickFromStore(each);
+                if (typeof expectedString !== 'string') {
+                    throw `Expected variable ${each} to be a string, but give ${typeof each}`;
+                }
+                processed.push(expectedString);
+            }
+            else {
+                escape = false;
+                processed.push(each);
+            }
+        }
+        if (escape) {
+            throw `Left unescaped $ at the end of the string, it should be either $$ or variable`;
+        }
+        return processed.join('');
+        
+        function findNextStop(formatKey, lastIdx) {
+            let terminators = [' ','$'];
+            let min = formatKey.length;
+            for (let each of terminators) {
+                let next = formatKey.indexOf(each, lastIdx);
+                if (next > -1 && next < min) {
+                    min = next;
+                }
+            }
+
+            return min;
+
+        }
+
     }
 
     opReturn(op) {
@@ -125,14 +191,18 @@ class FlowWalker {
         let value = this.resolveRaw(op, argName);
 
         if (typeof value === 'string' && value.indexOf('$') === 0) {
-            if (!this.variablesStore.has(value)) {
-                throw `Expected variable ${value} in storage`;
-            }
-            return this.variablesStore.get(value);
+            return this.pickFromStore(value);
         }
         else {
             return value;
         }
+    }
+
+    pickFromStore(value) {
+        if (!this.variablesStore.has(value)) {
+            throw `Expected variable ${value} in storage`;
+        }
+        return this.variablesStore.get(value);
     }
 
     resolveRaw(op, argName) {
