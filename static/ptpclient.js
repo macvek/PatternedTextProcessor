@@ -20,16 +20,42 @@ async function startPTP() {
         const payload = samplerCtl.value();
         const resp = await Comm.send('sample', {sample:payload})
         if (resp.failed) {
-            console.log(`Failed: ${resp.failed}`);
+            rawDisplayCtl.show(`Failed: ${resp.failed}`);
         }
         else {
-            console.log(Success, resp.parsed);
+            rawDisplayCtl.show('Success', resp);
         }
     })
     root.appendChild(sendSample);
+
+    let [rawDisplay, rawDisplayCtl] = ui.rawDisplay();
+    root.appendChild(rawDisplay);
+
 }
 
 class UI {
+
+    rawDisplay() {
+        let box = document.createElement('div');
+        let pre = document.createElement('pre');
+        let titleBlock = document.createElement('strong');
+
+        box.appendChild(titleBlock);
+        box.appendChild(pre);
+
+        let control = {
+            show(title, payload) {
+                titleBlock.innerText = title;
+                if (payload) {
+                    pre.innerText = JSON.stringify(payload, null, 4);
+                }
+            }
+        }
+
+        return [box, control];
+        
+    }
+
     submitButton(name, triggerFromInput) {
         let button = document.createElement('button');
         button.innerText = name;

@@ -26,15 +26,21 @@ class FlowWalker {
     }
 
     process(input) {
+        let self = this;
         let flow = this.flow;
         let stepInput = input;
-        let trace = [];
-        for (each of flow) {
-            trace.push(stepInput);
+        let trace = [traceDump()];
+        this.trace = trace;
+        for (let each of flow) {
             stepInput = this.callCmd(each, stepInput);
+            trace.push(traceDump());
         }
 
         return stepInput;
+
+        function traceDump() {
+            return {input: stepInput, vars: self.variablesSnapshot()};
+        }
     }
 
     callCmd(op, input) {
@@ -254,6 +260,15 @@ class FlowWalker {
             throw `Expected variable ${value} in storage`;
         }
         return this.variablesStore.get(value);
+    }
+
+    variablesSnapshot() {
+        let mapped = {}
+        this.variablesStore.forEach( (v,k) => {
+            mapped[''+k] = v;
+        });
+
+        return mapped;
     }
 
     resolveRaw(op, argName) {

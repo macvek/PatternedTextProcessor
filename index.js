@@ -48,10 +48,18 @@ app.post('/sample', (req,res) => {
   
   let ptp = new PTP([
     {call: 'arraySplit', key:' '},
-    {call: 'arrayJoin', key:','}
+    {call: 'store', key:'${key1}', source: {call:'arrayPick', idx:0}},
+    {call: 'store', key:'${key2}', source: {call:'arrayPick', idx:1}},
+    {call: 'store', key:'${key3}', source: {call:'arrayPick', idx:2}},
+    {call: 'array', array:['Fixed Prefix', '${key3}', '${key2}', '${key1}', 'Fixed Suffix']},
+    {call: 'arrayJoin', 'key': ' > '}
   ]);
 
-  answer(res, {parsed:ptp.parseInput(sample)});
+  let parsed = ptp.parseInput(sample);
+  answer(res, {
+    result: parsed,
+    trace: ptp.lastWalker.trace
+  });
 })
 
 app.listen(port, () => {
