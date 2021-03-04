@@ -179,26 +179,13 @@ class FlowWalker {
         return argValue;
     }
 
-    splitByMany(formatKey, separators) {
+    splitByMany(entry, separators) {
         const chunks = [];
-        let lastIdx = 0;
-        for(;;) {
-            let nextIdx = findNextStop(formatKey, separators, lastIdx);
-            if (nextIdx == formatKey.length) {
-                if (lastIdx < formatKey.length) {
-                    chunks.push(formatKey.substr(lastIdx));
-                }
-                break;
-            }
-            if (nextIdx > lastIdx) {
-                chunks.push(formatKey.substr(lastIdx, nextIdx-lastIdx));
-            }
-
-            let nextStop = findNextStop(formatKey, separators, lastIdx+1);
-
-            let variable = formatKey.substr(nextIdx, nextStop-nextIdx);
-            chunks.push(variable);
-            lastIdx = nextStop;
+        let afterLastPick = 0;
+        while(afterLastPick < entry.length) {
+            let nextIdx = findNextStop(entry, separators, afterLastPick+1);
+            chunks.push(entry.substr(afterLastPick,nextIdx-afterLastPick));
+            afterLastPick = nextIdx;
         }
 
         return chunks;
