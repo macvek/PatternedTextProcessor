@@ -27,7 +27,7 @@ function checkArray(fail) {
         {call: 'store', key:'${key1}', source: {call:'arrayPick', idx:0}},
         {call: 'store', key:'${key2}', source: {call:'arrayPick', idx:1}},
         {call: 'store', key:'${key3}', source: {call:'arrayPick', idx:2}},
-        {call: 'array', mapOf:['Fixed Prefix', '${key3}', '${key2}', '${key1}', 'Fixed Suffix']},
+        {call: 'array', array:['Fixed Prefix', '${key3}', '${key2}', '${key1}', 'Fixed Suffix']},
         {call: 'arrayJoin', 'key': ' > '}
     ]);
 

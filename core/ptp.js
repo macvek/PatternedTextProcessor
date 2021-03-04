@@ -63,13 +63,13 @@ class FlowWalker {
     }
 
     opArray(op) {
-        const mapOf = this.resolveRaw(op, 'mapOf');
-        if (!Array.isArray(mapOf)) {
-            throw `Expected mapOf to be array, got ${typeof mapOf}`;
+        const inputArray = this.resolveRaw(op, 'array');
+        if (!Array.isArray(inputArray)) {
+            throw `Expected mapOf to be array, got ${typeof inputArray}`;
         }
 
         const ret = [];
-        for (let each of mapOf) {
+        for (let each of inputArray) {
             if (each.indexOf('$') == 0) {
                 ret.push(this.pickFromStore(each));
             }
