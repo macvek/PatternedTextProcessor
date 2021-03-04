@@ -60,27 +60,8 @@ class FlowWalker {
 
     opFormat(op) {
         const formatKey = this.resolveRaw(op, 'key');
-        const chunks = [];
-        let lastIdx = 0;
-        for(;;) {
-            let nextIdx = findNextStop(formatKey, lastIdx);
-            if (nextIdx == formatKey.length) {
-                if (lastIdx < formatKey.length) {
-                    chunks.push(formatKey.substr(lastIdx));
-                }
-                break;
-            }
-            if (nextIdx > lastIdx) {
-                chunks.push(formatKey.substr(lastIdx, nextIdx-lastIdx));
-            }
-
-            let nextStop = findNextStop(formatKey, lastIdx+1);
-
-            let variable = formatKey.substr(nextIdx, nextStop-nextIdx);
-            chunks.push(variable);
-            lastIdx = nextStop;
-        }
-
+        const chunks = this.splitByMany(formatKey, [' ', '$']);
+        
         const processed = [];
         let escape = false;
         for (var each of chunks) {
@@ -104,21 +85,6 @@ class FlowWalker {
             throw `Left unescaped $ at the end of the string, it should be either $$ or variable`;
         }
         return processed.join('');
-        
-        function findNextStop(formatKey, lastIdx) {
-            let terminators = [' ','$'];
-            let min = formatKey.length;
-            for (let each of terminators) {
-                let next = formatKey.indexOf(each, lastIdx);
-                if (next > -1 && next < min) {
-                    min = next;
-                }
-            }
-
-            return min;
-
-        }
-
     }
 
     opReturn(op) {
@@ -212,4 +178,42 @@ class FlowWalker {
         }
         return argValue;
     }
+
+    splitByMany(formatKey, separators) {
+        const chunks = [];
+        let lastIdx = 0;
+        for(;;) {
+            let nextIdx = findNextStop(formatKey, separators, lastIdx);
+            if (nextIdx == formatKey.length) {
+                if (lastIdx < formatKey.length) {
+                    chunks.push(formatKey.substr(lastIdx));
+                }
+                break;
+            }
+            if (nextIdx > lastIdx) {
+                chunks.push(formatKey.substr(lastIdx, nextIdx-lastIdx));
+            }
+
+            let nextStop = findNextStop(formatKey, separators, lastIdx+1);
+
+            let variable = formatKey.substr(nextIdx, nextStop-nextIdx);
+            chunks.push(variable);
+            lastIdx = nextStop;
+        }
+
+        return chunks;
+
+        function findNextStop(input, terminators, lastIdx) {
+            let min = input.length;
+            for (let each of terminators) {
+                let next = input.indexOf(each, lastIdx);
+                if (next > -1 && next < min) {
+                    min = next;
+                }
+            }
+
+            return min;
+        }
+    }
+    
 }
