@@ -63,8 +63,8 @@ class FlowWalker {
         const chunks = [];
         let lastIdx = 0;
         for(;;) {
-            let nextIdx = formatKey.indexOf('$',lastIdx);
-            if (nextIdx == -1) {
+            let nextIdx = findNextStop(formatKey, lastIdx);
+            if (nextIdx == formatKey.length) {
                 if (lastIdx < formatKey.length) {
                     chunks.push(formatKey.substr(lastIdx));
                 }
