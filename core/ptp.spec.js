@@ -40,7 +40,7 @@ function checkJoin(fail) {
     let ptp = new PTP([
         {call: 'arraySplit', key:' '},
         {call: 'arrayJoin', key:','}
-    ])
+    ]);
 
     if ("A,B,C" !== ptp.parseInput("A B C")) {
         fail("join failed");

@@ -18,9 +18,13 @@ async function startPTP() {
     let [sendSample, sendSampleCtl] = ui.submitButton('Check sample', samplerCtl.input);
     sendSampleCtl.put('click', async () => {
         const payload = samplerCtl.value();
-        console.log(`Sending ${payload}`);
-        const resp = await Comm.send('ping', {ping:payload})
-        console.log(`And responed with ${resp.pong}`);
+        const resp = await Comm.send('sample', {sample:payload})
+        if (resp.failed) {
+            console.log(`Failed: ${resp.failed}`);
+        }
+        else {
+            console.log(Success, resp.parsed);
+        }
     })
     root.appendChild(sendSample);
 }

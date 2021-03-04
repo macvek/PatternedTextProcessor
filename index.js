@@ -39,6 +39,20 @@ app.post('/ping', (req,res) => {
   answer(res, {pong:req.body.ping})
 })
 
+app.post('/sample', (req,res) => {
+  const sample = req.body.sample;
+  if (typeof sample !== 'string') {
+    answer(res, {failed:'Expected string as sample'});
+    return;
+  }
+  
+  let ptp = new PTP([
+    {call: 'arraySplit', key:' '},
+    {call: 'arrayJoin', key:','}
+  ]);
+
+  answer(res, {parsed:ptp.parseInput(sample)});
+})
 
 app.listen(port, () => {
   console.log(`Started on http://localhost:${port}`);
