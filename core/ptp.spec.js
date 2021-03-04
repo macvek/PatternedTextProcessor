@@ -16,7 +16,35 @@ if (require.main == module) {
         checkUpper,
         checkLower,
         checkPad,
+        checkJoin,
+        checkArray,
     ]);
+}
+
+function checkArray(fail) {
+    let ptp = new PTP([
+        {call: 'arraySplit', key:' '},
+        {call: 'store', key:'${key1}', source: {call:'arrayPick', idx:0}},
+        {call: 'store', key:'${key2}', source: {call:'arrayPick', idx:1}},
+        {call: 'store', key:'${key3}', source: {call:'arrayPick', idx:2}},
+        {call: 'array', mapOf:['Fixed Prefix', '${key3}', '${key2}', '${key1}', 'Fixed Suffix']},
+        {call: 'arrayJoin', 'key': ' > '}
+    ]);
+
+    if ("Fixed Prefix > Last > Middle > First > Fixed Suffix" !== ptp.parseInput("First Middle Last")) {
+        fail('Check array creator failed');
+    }
+}
+
+function checkJoin(fail) {
+    let ptp = new PTP([
+        {call: 'arraySplit', key:' '},
+        {call: 'arrayJoin', key:','}
+    ])
+
+    if ("A,B,C" !== ptp.parseInput("A B C")) {
+        fail("join failed");
+    }
 }
 
 function checkPad(check) {

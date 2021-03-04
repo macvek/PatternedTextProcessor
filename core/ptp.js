@@ -53,11 +53,41 @@ class FlowWalker {
             case 'indexOf' : return this.opIndexOf(op, input);
             case 'indexedSplit' : return this.opIndexedSplit(op, input);
             case 'arraySplit' : return this.opArraySplit(op, input);
+            case 'arrayJoin' : return this.opArrayJoin(op, input);
             case 'iterateArrayValues': return this.opIterateArrayValues(op, input);
             case 'arrayPick': return this.opArrayPick(op,input);
+            case 'array': return this.opArray(op, input);
             default:
                 throw `Unsupported operation ${op.call}`
         }
+    }
+
+    opArray(op) {
+        const mapOf = this.resolveRaw(op, 'mapOf');
+        if (!Array.isArray(mapOf)) {
+            throw `Expected mapOf to be array, got ${typeof mapOf}`;
+        }
+
+        const ret = [];
+        for (let each of mapOf) {
+            if (each.indexOf('$') == 0) {
+                ret.push(this.pickFromStore(each));
+            }
+            else {
+                ret.push(each);
+            }
+        }
+
+        return ret;
+    }
+
+    opArrayJoin(op, input) {
+        if (!Array.isArray(input)) {
+            throw `Expected input to be array, got ${typeof input}`;
+        }
+
+        const key = this.resolve(op, 'key');
+        return input.join(key);
     }
 
     opPad(op, input) {
