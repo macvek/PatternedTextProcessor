@@ -31,9 +31,56 @@ async function startPTP() {
     let [rawDisplay, rawDisplayCtl] = ui.rawDisplay();
     root.appendChild(rawDisplay);
 
+    let [jsonInput, jsonInputCtl] = ui.jsonInput('PTP for Evaluation');
+    root.appendChild(jsonInput);
+    jsonInputCtl.textarea.value = JSON.stringify([
+        {call: 'arraySplit', key:' '},
+        {call: 'store', key:'${key1}', source: {call:'arrayPick', idx:0}},
+        {call: 'store', key:'${key2}', source: {call:'arrayPick', idx:1}},
+        {call: 'store', key:'${key3}', source: {call:'arrayPick', idx:2}},
+        {call: 'array', array:['Fixed Prefix', '${key3}', '${key2}', '${key1}', 'Fixed Suffix']},
+        {call: 'arrayJoin', 'key': ' > '}
+      ]);
+
+    let [evaluateBox, evaluateCtl] = ui.submitButton("Evaluate", jsonInputCtl.textarea);
+    root.appendChild(evaluateBox);
+    evaluateCtl.put('click', async () => {
+        const ptp = jsonInputCtl.asJson();
+        const source = samplerCtl.value();
+        const result = await Comm.send('evaluate', {ptp, source});
+        rawDisplayCtl.show('Success', result);
+    });
+    
 }
 
 class UI {
+
+
+    jsonInput(name) {
+        let box = document.createElement('div');
+        let label = document.createElement('span');
+        let textarea = document.createElement('textarea');
+
+        box.appendChild(label);
+        box.appendChild(textarea);
+
+        
+        let control = {
+            setName(newName) {
+                label.innerText = name;
+            },
+
+            asJson() {
+                return JSON.parse(textarea.value);
+            },
+
+            textarea
+        }
+
+
+        control.setName(name);
+        return [box, control];
+    }
 
     rawDisplay() {
         let box = document.createElement('div');
@@ -95,6 +142,7 @@ class UI {
             }
         })
     }
+
 }
 
 class EventConsumer {

@@ -3,7 +3,6 @@ const morgan = require('morgan');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const PTP = require('./core/ptp');
-const { log } = require('console');
 
 const app = express();
 const port = 3000;
@@ -39,6 +38,14 @@ app.post('/ping', (req,res) => {
   answer(res, {pong:req.body.ping})
 })
 
+app.post('/evaluate', (req,res) => {
+  const ptpInput = req.body.ptp;
+  const source = req.body.source;
+
+  let ptp = new PTP(ptpInput);
+  answer(res, evaulutePtp(ptp, source));
+})
+
 app.post('/sample', (req,res) => {
   const sample = req.body.sample;
   if (typeof sample !== 'string') {
@@ -55,11 +62,7 @@ app.post('/sample', (req,res) => {
     {call: 'arrayJoin', 'key': ' > '}
   ]);
 
-  let parsed = ptp.parseInput(sample);
-  answer(res, {
-    result: parsed,
-    trace: ptp.lastWalker.trace
-  });
+  answer(res, evaulutePtp(ptp, sample));
 })
 
 app.listen(port, () => {
@@ -69,4 +72,12 @@ app.listen(port, () => {
 function answer(res, payload) {
   res.status=200;
   res.send(JSON.stringify(payload));
+}
+
+function evaulutePtp(ptp, input) {
+  let parsed = ptp.parseInput(input);
+  return {
+    result: parsed,
+    trace: ptp.lastWalker.trace
+  }
 }

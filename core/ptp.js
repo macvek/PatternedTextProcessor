@@ -5,9 +5,9 @@ module.exports = class PTP {
         this.flowSpec = flowSpec;
     }
 
-    parseInput(textInput) {
+    parseInput(input) {
         const walker = this.flowWalker();
-        const ret = walker.process(textInput);
+        const ret = walker.process(input);
         this.lastWalker = walker;
         return ret;
     }
