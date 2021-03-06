@@ -138,6 +138,8 @@ class UIComponents {
         let ui = this.ui;
         let [wizardBox, wizardBoxCtl] = ui.box();
 
+        let selection = new SelectionHandler();
+
         wizardBox.classList.add('wizard');
         let [execButton, execCtl] = ui.submitButton('Execute');
 
@@ -166,12 +168,26 @@ class UIComponents {
             label.innerText = callLabel;
             label.classList.add('callbox-label');
             callBox.classList.add('callbox');
+            callBox.onclick = clickHandler;
+            selection.whenSelected(callBox, (flag) => {
+                if (flag) {
+                    callBox.classList.add('callbox-selected');
+                }
+                else {
+                    callBox.classList.remove('callbox-selected');
+                }
+            });
+
             stepBox.appendChild(callBox);
 
             if (step.call === 'store') {
                 let source = step.source;
                 let sourceBox = boxForCall(source, level + 1);
                 stepBox.appendChild(sourceBox);
+            }
+
+            function clickHandler(e) {
+                selection.clickedOn(callBox,e);
             }
 
             return stepBox;
@@ -255,6 +271,53 @@ class UIComponents {
         });
 
         return [box];
+    }
+}
+
+class SelectionHandler {
+    constructor() {
+        this.handlers = new Map();
+        this.selected = new Set();
+    }
+
+    clickedOn(subject,event) {
+        let singleSelect = !event.ctrlKey;
+
+        let unselect = [];
+
+        let alreadySelected = false;
+        for (let each of this.selected) {
+            if (each === subject) {
+                alreadySelected = true;
+                unselect.push(each);
+            }
+
+            if (singleSelect) {
+                unselect.push(each);
+            }
+        }
+
+        if (!alreadySelected) {
+            let handler = this.handlers.get(subject);
+            if (!handler) {
+                log.error('missing handler', subject);
+                throw 'missng handler; detail in log';
+            }
+
+            handler(true);
+            this.selected.add(subject);
+        }
+
+        for (let each of unselect) {
+            let handler = this.handlers.get(each);
+            handler(false);
+            this.selected.delete(each);
+        }
+        
+    }
+
+    whenSelected(what, handler) {
+        this.handlers.set(what, handler);
     }
 }
 
