@@ -26,6 +26,49 @@ async function startPTP() {
 }
 
 class UI {
+
+    toolkitBox() {
+        let box = document.createElement('div');
+        box.classList.add('toolkit-box');
+        box.style.pointerEvents = 'none';
+        let control = {
+            surround(items) {
+                if (items.length == 0) {
+                    box.style.display = 'none';
+                }
+                else {
+                    box.style.display = 'block';
+                    box.style.position = 'absolute';
+                  
+                    let boxRect = box.parentNode.getBoundingClientRect();
+
+                    let rect = {
+                        top:9999999999,left:99999999999,bottom:0,right:0
+                    }
+
+                    for (let each of items) {
+                        let eachRect = each.getBoundingClientRect();
+                        rect.top = Math.min(rect.top, eachRect.top);
+                        rect.left = Math.min(rect.left, eachRect.left);
+                        rect.bottom = Math.max(rect.bottom, eachRect.bottom);
+                        rect.right = Math.max(rect.right, eachRect.right);
+                    }
+
+                    let width = rect.right - rect.left;
+                    let height = rect.bottom - rect.top;
+
+                    box.style.left = `${rect.left - boxRect.left}px`;
+                    box.style.top  = `${rect.top - boxRect.top}px`;
+                    box.style.width = `${width}px`;
+                    box.style.height = `${height}px`;
+                    
+                }
+            }
+        }
+
+        return [box, control];
+    }
+
     box() {
         let box = document.createElement('div');
         let control = {
@@ -143,19 +186,28 @@ class UIComponents {
         wizardBox.classList.add('wizard');
         let [execButton, execCtl] = ui.submitButton('Execute');
 
+        execCtl.put('click', () => {console.log('execute clicked');});
+
         let control = {
             load(ptpInput) {
                 wizardBoxCtl.clear();
+                let [toolkitBox, toolkitCtl] = ui.toolkitBox();
+                wizardBoxCtl.add(toolkitBox);
+                toolkitCtl.surround([]);
+
                 for (let step of ptpInput) {
-                    wizardBoxCtl.add(boxForCall(step));
+                    wizardBoxCtl.add(boxForCall(step, toolkitCtl));
                 }
                 wizardBoxCtl.add(execButton);
+
             }
         }
 
+        wizardBox.style.position = 'relative';
+        
         return [wizardBox, control];
 
-        function boxForCall(step, level = 0) {
+        function boxForCall(step, toolkitCtl, level = 0) {
             let stepBox = document.createElement('div');
             if (level > 0) {
                 stepBox.style.marginLeft = 10 * level + 'px';
@@ -168,7 +220,7 @@ class UIComponents {
             label.innerText = callLabel;
             label.classList.add('callbox-label');
             callBox.classList.add('callbox');
-            callBox.onclick = clickHandler;
+            callBox.addEventListener('click',clickHandler);
             selection.whenSelected(callBox, (flag) => {
                 if (flag) {
                     callBox.classList.add('callbox-selected');
@@ -178,11 +230,15 @@ class UIComponents {
                 }
             });
 
+            selection.postSelection( () => {
+                toolkitCtl.surround(Array.from(selection.loadSelected()));
+            });
+
             stepBox.appendChild(callBox);
 
             if (step.call === 'store') {
                 let source = step.source;
-                let sourceBox = boxForCall(source, level + 1);
+                let sourceBox = boxForCall(source, toolkitCtl, level + 1);
                 stepBox.appendChild(sourceBox);
             }
 
@@ -280,6 +336,10 @@ class SelectionHandler {
         this.selected = new Set();
     }
 
+    loadSelected() {
+        return this.selected;
+    }
+
     clickedOn(subject,event) {
         let singleSelect = !event.ctrlKey;
 
@@ -304,20 +364,28 @@ class SelectionHandler {
                 throw 'missng handler; detail in log';
             }
 
-            handler(true);
             this.selected.add(subject);
+            handler(true);
         }
 
         for (let each of unselect) {
             let handler = this.handlers.get(each);
-            handler(false);
             this.selected.delete(each);
+            handler(false);
+        }
+
+        if (this.postSelectionHandler) {
+            this.postSelectionHandler();
         }
         
     }
 
     whenSelected(what, handler) {
         this.handlers.set(what, handler);
+    }
+
+    postSelection(handler) {
+        this.postSelectionHandler = handler;
     }
 }
 
