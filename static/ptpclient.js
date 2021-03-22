@@ -14,31 +14,124 @@ async function startPTP() {
     let ui = new UI();
     let components = new UIComponents(ui);
     
-    let [wizardBox, wizardCtl] = components.wizardBox()
+    let [wizardBox, wizardCtl] = components.wizardBox();
+    let [stepEditBox, stepEditBoxCtl] = components.stepEditBox();
+    
+
     let [devBox] = components.developerBox(wizardCtl);
     devBox.classList.add('devbox');
     root.appendChild(devBox);
-
     root.appendChild(wizardBox);
-
-
-
+    root.appendChild(stepEditBox);
 }
 
 class UI {
 
+    labeledListbox(caption) {
+        let overlap = document.createElement('div');
+        let label = document.createElement('label');
+        label.innerHTML = caption;
+
+        let listbox = document.createElement('select');
+
+        overlap.appendChild(label);
+        overlap.appendChild(listbox);
+
+        listbox.addEventListener('change', onChange);
+
+        function onChange() {
+            let val = listbox.value;
+            let callback = callbackMap.get(val);
+            if (callback) {
+                callback(val);
+            }
+        }
+
+        let callbackMap = new Map();
+
+        let ctl = {
+            triggerSelectCallback() { 
+                onChange();
+            },
+
+            add(name, onSelectCallback) {
+                let sel = document.createElement('option');
+                sel.innerText = name;
+
+                listbox.appendChild(sel);
+                callbackMap.set(name, onSelectCallback);
+            }
+        }
+
+        return [overlap, ctl];
+    }
+
+    icon(name) {
+        // sourced from https://graphemica.com/
+        function htmlEntityCode() {
+            switch(name) {
+                case 'xsign': return "\u274c"; //https://graphemica.com/%E2%9D%8C
+                case 'pencil' : return '&#x270F;'; // https://graphemica.com/%E2%9C%8F
+                case 'floppydisk' : return '&#x1F4BE;';//https://graphemica.com/%F0%9F%92%BE
+                default: return `NoCodeFor ${name}`
+            }
+            
+        }
+
+        let box = document.createElement('span');
+        box.innerHTML = htmlEntityCode();
+        box.classList.add('icon-character');
+        return box;
+    }
+
     toolkitBox() {
+        let self = this;
+        
         let box = document.createElement('div');
-        box.classList.add('toolkit-box');
-        box.style.pointerEvents = 'none';
+        box.style.position = 'absolute';
+
+        let outlined = document.createElement('div');
+        outlined.style.position = 'absolute';
+        outlined.classList.add('toolkit-outline');
+        outlined.style.pointerEvents = 'none';
+
+        box.appendChild(outlined);
+        
+        let onControlCallback;
+        
+        let toolButtons = document.createElement('div');
+        toolButtons.classList.add('toolkit-toolButtons');
+        toolButtons.style.position = 'absolute';
+        
+
+        toolButtons.appendChild(buttonIcon('pencil'));
+        toolButtons.appendChild(buttonIcon('xsign'));
+
+        function buttonIcon(name) {
+            let box = self.icon(name);
+            box.classList.add('toolkit-button');
+
+            return box;
+        }
+
+        box.appendChild(toolButtons);
+        
+        
         let control = {
+            onControl(callback) {
+                onControlCallback = callback;
+            },
+            
+            showControls( items ) {
+                
+            },
+
             surround(items) {
                 if (items.length == 0) {
                     box.style.display = 'none';
                 }
                 else {
                     box.style.display = 'block';
-                    box.style.position = 'absolute';
                   
                     let boxRect = box.parentNode.getBoundingClientRect();
 
@@ -59,9 +152,10 @@ class UI {
 
                     box.style.left = `${rect.left - boxRect.left}px`;
                     box.style.top  = `${rect.top - boxRect.top}px`;
-                    box.style.width = `${width}px`;
-                    box.style.height = `${height}px`;
-                    
+                    outlined.style.width = `${width}px`;
+                    outlined.style.height = `${height}px`;
+
+                    toolButtons.style.left = `${width + 5}px`;
                 }
             }
         }
@@ -175,6 +269,35 @@ class UI {
 class UIComponents {
     constructor(ui) {
         this.ui = ui;
+    }
+
+    stepEditBox() {
+        let ui = this.ui;
+        let [editBox,editBoxCtl] = ui.box();
+
+        editBox.classList.add('step-edit');
+
+        let [listbox,listboxCtl] = ui.labeledListbox('Step type');
+        editBoxCtl.add(listbox);
+
+        listboxCtl.add('pad', dummyPicked);
+        listboxCtl.add('upper', dummyPicked);
+        listboxCtl.add('lower', dummyPicked);
+        listboxCtl.add('trim', dummyPicked);
+        listboxCtl.add('format', dummyPicked);
+        listboxCtl.add('return', dummyPicked);
+        listboxCtl.add('store', dummyPicked);
+        listboxCtl.add('indexOf', dummyPicked);
+        listboxCtl.add('indexedSplit', dummyPicked);
+        listboxCtl.add('arraySplit', dummyPicked);
+        listboxCtl.add('arrayJoin', dummyPicked);
+        listboxCtl.add('iterateArrayValues', dummyPicked);
+        listboxCtl.add('arrayPick', dummyPicked);
+        listboxCtl.add('array', dummyPicked);
+
+        function dummyPicked(x) { console.log(`picked ${x}`)}; 
+
+        return [editBox, {}];
     }
 
     wizardBox() {
