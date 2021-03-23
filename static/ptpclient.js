@@ -27,6 +27,14 @@ async function startPTP() {
 
 class UI {
 
+    label(text) {
+        let span = document.createElement('span');
+        span.classList.add('label');
+        span.innerText = text;
+
+        return [span];
+    }
+
     labeledTextbox(caption) {
         let overlap = document.createElement('div');
         let label = document.createElement('label');
@@ -57,6 +65,35 @@ class UI {
         return [dom,ctl];
     }
 
+    labeledFixedListbox(caption, values) {
+        let [listbox,listboxCtl] = this.labeledListbox(caption);
+        
+        for (let each of values) {
+            listboxCtl.add(each, changed);
+        }
+        
+        let currentVal;
+        listboxCtl.triggerSelectCallback();
+
+
+        let fixedCtl = {
+            getValue() {
+                return currentVal;
+            },
+
+            setValue(it) {
+                listboxCtl.setValue(it);
+            }
+        }
+
+        return [listbox, fixedCtl];
+
+        function changed(newVal) {
+            currentVal = newVal;
+        }
+
+    }
+    
     labeledListbox(caption) {
         let overlap = document.createElement('div');
         let label = document.createElement('label');
@@ -91,6 +128,10 @@ class UI {
 
                 listbox.appendChild(sel);
                 callbackMap.set(name, onSelectCallback);
+            },
+
+            setValue(it) {
+                listbox.value = it;
             }
         }
 
@@ -333,7 +374,6 @@ class UIComponents {
 
         detailsBoxCtl.clear();
 
-        
         function formForType(type) {
             detailsBoxCtl.clear();
             let [formDOM, formCtl] = self.dynamicForm(loadModel(type)); 
@@ -342,7 +382,31 @@ class UIComponents {
 
         function loadModel(type) {
             switch(type) {
-                case 'pad': return { key:'string', length:'number', align: ['left','right','center'] }
+                case 'pad': return { key:'string', length:'number', align: {complex:'list', values:['left','right','center']} };
+                
+                case 'iterateArrayValues': 
+                case 'array': 
+                    return { array: 'array'};
+                
+                case 'upper':
+                case 'lower':
+                case 'trim':
+                    return {'No properties' : 'label'};
+                
+                case 'format': 
+                case 'return':
+                case 'arrayJoin':
+                case 'arraySplit':
+                case 'indexOf':
+                    return { key:'string'}
+
+                case 'store': 
+                    return { key: 'string'};
+                
+                case 'arrayPick':
+                case 'indexedSplit' : 
+                    return { idx: 'number'};
+                
                 default:
                     let ret = {};
                     ret['unknown '+type] = 'string';    
@@ -375,9 +439,27 @@ class UIComponents {
         }
 
         function inputByType(title, type) {
+            if (typeof type == 'object') {
+                let complex = type.complex;
+                if (!complex) {
+                    log.error('type as object must have have .complex', type);
+                    throw 'failed, error in log';
+                }
+
+                if (complex === 'list') {
+                    let values = type.values;
+                    return ui.labeledFixedListbox(title, values);
+                }
+
+                throw `Failed, unsupported complex type ${complex}`;
+            }
+            
             switch(type) {
                 case 'string': return ui.labeledTextbox(title);
                 case 'number': return ui.labeledNumberbox(title);
+                case 'array': return ui.labeledTextbox(title);
+                case 'list': return ui.labeledTextbox(title);
+                case 'label': return ui.label(title);
                 default:
                     console.log(`Missing implementation for ${type}, for field ${title}, rolling back to text, marking it with [def]`);
                     return ui.labeledTextbox(title + '[def]');
