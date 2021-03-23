@@ -27,12 +27,43 @@ async function startPTP() {
 
 class UI {
 
+    labeledTextbox(caption) {
+        let overlap = document.createElement('div');
+        let label = document.createElement('label');
+        label.innerHTML = caption;
+
+        let input = document.createElement('input');
+        input.classList.add('labeled-input');
+
+        overlap.appendChild(label);
+        overlap.appendChild(input);
+
+        return [overlap, {
+            input,
+            getValue() {
+                return input.value;
+            },
+
+            setValue(val) {
+                input.value = val;
+            }
+
+        }];
+    }
+
+    labeledNumberbox(caption) {
+        let [dom, ctl] = this.labeledTextbox(caption);
+        ctl.input.setAttribute('type', 'number');
+        return [dom,ctl];
+    }
+
     labeledListbox(caption) {
         let overlap = document.createElement('div');
         let label = document.createElement('label');
         label.innerHTML = caption;
 
         let listbox = document.createElement('select');
+        listbox.classList.add('labeled-select');
 
         overlap.appendChild(label);
         overlap.appendChild(listbox);
@@ -273,6 +304,8 @@ class UIComponents {
 
     stepEditBox() {
         let ui = this.ui;
+        let self = this;
+
         let [editBox,editBoxCtl] = ui.box();
 
         editBox.classList.add('step-edit');
@@ -280,24 +313,102 @@ class UIComponents {
         let [listbox,listboxCtl] = ui.labeledListbox('Step type');
         editBoxCtl.add(listbox);
 
-        listboxCtl.add('pad', dummyPicked);
-        listboxCtl.add('upper', dummyPicked);
-        listboxCtl.add('lower', dummyPicked);
-        listboxCtl.add('trim', dummyPicked);
-        listboxCtl.add('format', dummyPicked);
-        listboxCtl.add('return', dummyPicked);
-        listboxCtl.add('store', dummyPicked);
-        listboxCtl.add('indexOf', dummyPicked);
-        listboxCtl.add('indexedSplit', dummyPicked);
-        listboxCtl.add('arraySplit', dummyPicked);
-        listboxCtl.add('arrayJoin', dummyPicked);
-        listboxCtl.add('iterateArrayValues', dummyPicked);
-        listboxCtl.add('arrayPick', dummyPicked);
-        listboxCtl.add('array', dummyPicked);
+        listboxCtl.add('pad', formForType);
+        listboxCtl.add('upper', formForType);
+        listboxCtl.add('lower', formForType);
+        listboxCtl.add('trim', formForType);
+        listboxCtl.add('format', formForType);
+        listboxCtl.add('return', formForType);
+        listboxCtl.add('store', formForType);
+        listboxCtl.add('indexOf', formForType);
+        listboxCtl.add('indexedSplit', formForType);
+        listboxCtl.add('arraySplit', formForType);
+        listboxCtl.add('arrayJoin', formForType);
+        listboxCtl.add('iterateArrayValues', formForType);
+        listboxCtl.add('arrayPick', formForType);
+        listboxCtl.add('array', formForType);
 
-        function dummyPicked(x) { console.log(`picked ${x}`)}; 
+        let [detailsBox, detailsBoxCtl] = ui.box();
+        editBoxCtl.add(detailsBox);
 
+        detailsBoxCtl.clear();
+
+        
+        function formForType(type) {
+            detailsBoxCtl.clear();
+            let [formDOM, formCtl] = self.dynamicForm(loadModel(type)); 
+            detailsBoxCtl.add(formDOM);
+        }
+
+        function loadModel(type) {
+            switch(type) {
+                case 'pad': return { key:'string', length:'number', align: ['left','right','center'] }
+                default:
+                    let ret = {};
+                    ret['unknown '+type] = 'string';    
+                    return ret;
+            }
+        }
+
+        listboxCtl.triggerSelectCallback();
         return [editBox, {}];
+    }
+
+    dynamicForm(meta) {
+        let ui = this.ui;
+
+        let inputs = [];
+        let inputsToKey = {};
+        for (let key in meta) {
+            let inputPair = inputByType(key, meta[key]);
+            inputs.push(inputPair);
+            inputsToKey[key] = inputPair;
+
+            let [_, inputCtl] = inputPair;
+        }
+
+        let [box, boxCtl] = ui.box();
+        
+        for (let each of inputs) {
+            let [inputDom] = each;
+            boxCtl.add(inputDom);    
+        }
+
+        function inputByType(title, type) {
+            switch(type) {
+                case 'string': return ui.labeledTextbox(title);
+                case 'number': return ui.labeledNumberbox(title);
+                default:
+                    console.log(`Missing implementation for ${type}, for field ${title}, rolling back to text, marking it with [def]`);
+                    return ui.labeledTextbox(title + '[def]');
+            }   
+        }
+
+        let formCtl = {
+            setValue(inputObj) {
+                for (let key in inputObj) {
+                    let fieldPair = inputsToKey[key];
+                    if (!fieldPair) {
+                        console.log(`Failed to set value for field ${key}`, inputObj);
+                        continue;
+                    }
+                    let [_, fieldCtl] = fieldPair;
+                    let value = inputObj[key];
+                    fieldCtl.setValue(value);
+                }
+            },
+            getValue() {
+                let ret = {};
+                for (let key in inputsToKey) {
+                    let [_, fieldCtl] = inputsToKey[key];
+                    ret[key] = fieldCtl.getValue();
+                }
+
+                return ret;
+            }
+        }
+
+        return [box, formCtl];
     }
 
     wizardBox() {
