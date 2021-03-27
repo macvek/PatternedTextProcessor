@@ -16,13 +16,26 @@ async function startPTP() {
     
     let [wizardBox, wizardCtl] = components.wizardBox();
     let [stepEditBox, stepEditBoxCtl] = components.stepEditBox();
-    
+    stepEditBoxCtl.close();
+
+    wizardCtl.setActionHandler( (name, steps) => {
+        switch(name) {
+            case 'edit': 
+                return stepEditBoxCtl.open(steps);
+            default:
+                console.log(`not supported yet ${name}`);
+        }
+    });
 
     let [devBox] = components.developerBox(wizardCtl);
     devBox.classList.add('devbox');
     root.appendChild(devBox);
     root.appendChild(wizardBox);
     root.appendChild(stepEditBox);
+
+    stepEditBoxCtl.onSave( (prev, saved) => {
+        wizardCtl.replace(prev,saved);
+    });
 }
 
 class UI {
@@ -176,13 +189,16 @@ class UI {
         toolButtons.style.position = 'absolute';
         
 
-        toolButtons.appendChild(buttonIcon('pencil'));
-        toolButtons.appendChild(buttonIcon('xsign'));
+        let editBtn = buttonIcon('pencil',editAction);
+        let deleteBtn = buttonIcon('xsign', deleteAction);
 
-        function buttonIcon(name) {
+        toolButtons.appendChild(editBtn);
+        toolButtons.appendChild(deleteBtn);
+
+        function buttonIcon(name, clickAction) {
             let box = self.icon(name);
             box.classList.add('toolkit-button');
-
+            box.addEventListener('click', clickAction);
             return box;
         }
 
@@ -194,7 +210,7 @@ class UI {
                 onControlCallback = callback;
             },
             
-            showControls( items ) {
+            showControls( whichToShow ) {
                 
             },
 
@@ -233,6 +249,18 @@ class UI {
         }
 
         return [box, control];
+
+        function editAction() {
+            if (onControlCallback) {
+                onControlCallback('edit');
+            }
+        }
+
+        function deleteAction() {
+            if (onControlCallback) {
+                onControlCallback('delete');
+            }
+        }
     }
 
     box() {
@@ -374,6 +402,42 @@ class UIComponents {
 
         detailsBoxCtl.clear();
 
+        let stepOnOpen;
+
+        let [saveButton,saveButtonCtl] = ui.submitButton('Save');
+        saveButtonCtl.put('click', () => {
+            if (saveCallback) {
+                let copied = CopyObject.viaJson(stepOnOpen);
+                if (copied.key) {
+                    copied.key = 'Random'+Math.floor(Math.random()*100);
+                }
+                saveCallback(stepOnOpen, copied);
+            }
+        })
+        
+        editBoxCtl.add(saveButton);
+
+        let saveCallback;
+        let stepEditBoxCtl = {
+            close() {
+                editBox.style.display = 'none';
+            },
+
+            open(steps) {
+                stepOnOpen = steps[0];
+                if (steps.length != 1) {
+                    console.log("STEP EDITOR SUPPORTS SINGLE SELECTION YET");
+                }
+                editBox.style.display = 'block';
+            },
+
+            onSave(callback) {
+                saveCallback = callback;
+            }
+
+
+        }
+
         function formForType(type) {
             detailsBoxCtl.clear();
             let [formDOM, formCtl] = self.dynamicForm(loadModel(type)); 
@@ -415,7 +479,7 @@ class UIComponents {
         }
 
         listboxCtl.triggerSelectCallback();
-        return [editBox, {}];
+        return [editBox, stepEditBoxCtl];
     }
 
     dynamicForm(meta) {
@@ -495,33 +559,53 @@ class UIComponents {
 
     wizardBox() {
         let ui = this.ui;
-        let [wizardBox, wizardBoxCtl] = ui.box();
+        let [box, boxCtl] = ui.box();
 
         let selection = new SelectionHandler();
+        let selectedSteps;
 
-        wizardBox.classList.add('wizard');
+        box.classList.add('wizard');
         let [execButton, execCtl] = ui.submitButton('Execute');
 
         execCtl.put('click', () => {console.log('execute clicked');});
 
+        let currentPtp;
+
+        let actionHandler;
         let control = {
+            setActionHandler(x) {
+                actionHandler = x;
+            }, 
+            
             load(ptpInput) {
-                wizardBoxCtl.clear();
+                currentPtp = ptpInput;
+                selectedSteps = new Set();
+                boxCtl.clear();
                 let [toolkitBox, toolkitCtl] = ui.toolkitBox();
-                wizardBoxCtl.add(toolkitBox);
+                boxCtl.add(toolkitBox);
                 toolkitCtl.surround([]);
+                toolkitCtl.onControl( actionName => {
+                    if (actionHandler) {
+                        actionHandler(actionName, Array.from(selectedSteps));
+                    }
+                })
 
                 for (let step of ptpInput) {
-                    wizardBoxCtl.add(boxForCall(step, toolkitCtl));
+                    boxCtl.add(boxForCall(step, toolkitCtl));
                 }
-                wizardBoxCtl.add(execButton);
+                boxCtl.add(execButton);
 
+            },
+
+            replace(prev,saved) {
+                let withReplacement = CopyObject.replaceLeaf(currentPtp, prev,saved);
+                this.load(withReplacement);
             }
         }
 
-        wizardBox.style.position = 'relative';
+        box.style.position = 'relative';
         
-        return [wizardBox, control];
+        return [box, control];
 
         function boxForCall(step, toolkitCtl, level = 0) {
             let stepBox = document.createElement('div');
@@ -540,9 +624,11 @@ class UIComponents {
             selection.whenSelected(callBox, (flag) => {
                 if (flag) {
                     callBox.classList.add('callbox-selected');
+                    selectedSteps.add(step);
                 }
                 else {
                     callBox.classList.remove('callbox-selected');
+                    selectedSteps.delete(step);
                 }
             });
 
@@ -757,4 +843,46 @@ class Comm {
 
     }
 
+}
+
+class CopyObject {
+    static viaJson(src) {
+        return JSON.parse(JSON.stringify(src));
+    }
+
+    static replaceLeaf(root, toRepl, replWith) {
+        if (deepCandidate(root)) {
+            return deepReplace(root);
+        }
+        else {
+            return CopyObject.viaJson(root);
+        }
+
+        function deepReplace(curr) {
+            for (let eachKey in curr) {
+                let value = curr[eachKey];
+                if (value === toRepl) {
+                    curr[eachKey] = replWith;
+                    // root now has replaced key, so copy it
+                    let retVal = CopyObject.viaJson(root);
+                    // rollback to previous state of root
+                    curr[eachKey] = toRepl;
+                    
+                    // return json copied structure
+                    return retVal;
+                }
+                else if (deepCandidate(value)) {
+                    let ret = deepReplace(value);
+                    if (ret) {
+                        return ret;
+                    }
+                }
+            }
+        }
+
+        function deepCandidate(it) {
+            return Array.isArray(it) || typeof it === 'object';
+        }
+       
+    }
 }
