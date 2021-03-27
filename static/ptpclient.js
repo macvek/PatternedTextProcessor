@@ -145,6 +145,7 @@ class UI {
 
             setValue(it) {
                 listbox.value = it;
+                onChange();
             }
         }
 
@@ -403,6 +404,7 @@ class UIComponents {
         detailsBoxCtl.clear();
 
         let stepOnOpen;
+        let detailsFormCtl;
 
         let [saveButton,saveButtonCtl] = ui.submitButton('Save');
         saveButtonCtl.put('click', () => {
@@ -412,6 +414,7 @@ class UIComponents {
                     copied.key = 'Random'+Math.floor(Math.random()*100);
                 }
                 saveCallback(stepOnOpen, copied);
+                stepEditBoxCtl.close();
             }
         })
         
@@ -428,6 +431,14 @@ class UIComponents {
                 if (steps.length != 1) {
                     console.log("STEP EDITOR SUPPORTS SINGLE SELECTION YET");
                 }
+                listboxCtl.setValue(stepOnOpen.call);
+                if (detailsFormCtl) {
+                    detailsFormCtl.setValue(stepOnOpen);
+                }
+                else {
+                    console.log('Expected detailsFormCtl to be filled for', stepOnOpen);
+                }
+            
                 editBox.style.display = 'block';
             },
 
@@ -441,6 +452,7 @@ class UIComponents {
         function formForType(type) {
             detailsBoxCtl.clear();
             let [formDOM, formCtl] = self.dynamicForm(loadModel(type)); 
+            detailsFormCtl = formCtl;
             detailsBoxCtl.add(formDOM);
         }
 
@@ -465,7 +477,7 @@ class UIComponents {
                     return { key:'string'}
 
                 case 'store': 
-                    return { key: 'string'};
+                    return { key: 'string', source:'pass'};
                 
                 case 'arrayPick':
                 case 'indexedSplit' : 
@@ -487,6 +499,9 @@ class UIComponents {
 
         let inputs = [];
         let inputsToKey = {};
+
+        meta.call = 'pass';
+
         for (let key in meta) {
             let inputPair = inputByType(key, meta[key]);
             inputs.push(inputPair);
@@ -499,7 +514,9 @@ class UIComponents {
         
         for (let each of inputs) {
             let [inputDom] = each;
-            boxCtl.add(inputDom);    
+            if (inputDom) {
+                boxCtl.add(inputDom);    
+            }
         }
 
         function inputByType(title, type) {
@@ -519,6 +536,7 @@ class UIComponents {
             }
             
             switch(type) {
+                case 'pass': return passCtl();
                 case 'string': return ui.labeledTextbox(title);
                 case 'number': return ui.labeledNumberbox(title);
                 case 'array': return ui.labeledTextbox(title);
@@ -528,6 +546,17 @@ class UIComponents {
                     console.log(`Missing implementation for ${type}, for field ${title}, rolling back to text, marking it with [def]`);
                     return ui.labeledTextbox(title + '[def]');
             }   
+
+            function passCtl() {
+                return [null, {
+                    setValue(x) {
+                        this.val = x;
+                    },
+                    getValue() {
+                        return this.val;
+                    }
+                }];
+            }
         }
 
         let formCtl = {
