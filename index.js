@@ -43,7 +43,7 @@ app.post('/evaluate', (req,res) => {
   const source = req.body.source;
 
   let ptp = new PTP(ptpInput);
-  answer(res, evaulutePtp(ptp, source));
+  answer(res, evaluatePtp(ptp, source));
 })
 
 app.post('/sample', (req,res) => {
@@ -62,7 +62,7 @@ app.post('/sample', (req,res) => {
     {call: 'arrayJoin', 'key': ' > '}
   ]);
 
-  answer(res, evaulutePtp(ptp, sample));
+  answer(res, evaluatePtp(ptp, sample));
 })
 
 app.listen(port, () => {
@@ -74,10 +74,17 @@ function answer(res, payload) {
   res.send(JSON.stringify(payload));
 }
 
-function evaulutePtp(ptp, input) {
-  let parsed = ptp.parseInput(input);
-  return {
-    result: parsed,
-    trace: ptp.lastWalker.trace
+function evaluatePtp(ptp, input) {
+  try {
+    let parsed = ptp.parseInput(input);
+    return {
+      result: parsed,
+      trace: ptp.lastWalker.trace
+    }
+  }
+  catch(e) {
+    return {
+      failedWithError:e
+    }
   }
 }
