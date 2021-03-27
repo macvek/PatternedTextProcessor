@@ -27,7 +27,13 @@ async function startPTP() {
         }
     });
 
-    let [devBox] = components.developerBox(wizardCtl);
+
+    let [devBox, devCtl] = components.developerBox(wizardCtl);
+
+    wizardCtl.setOnExec(ptpToEvaluate => {
+        devCtl.fill(JSON.stringify(ptpToEvaluate));
+    });
+
     devBox.classList.add('devbox');
     root.appendChild(devBox);
     root.appendChild(wizardBox);
@@ -75,6 +81,11 @@ class UI {
     labeledNumberbox(caption) {
         let [dom, ctl] = this.labeledTextbox(caption);
         ctl.input.setAttribute('type', 'number');
+        let origGetValue = ctl.getValue;
+        ctl.getValue = () => {
+            let proxied = origGetValue.apply(this);
+            return 1*proxied;
+        }
         return [dom,ctl];
     }
 
@@ -409,10 +420,7 @@ class UIComponents {
         let [saveButton,saveButtonCtl] = ui.submitButton('Save');
         saveButtonCtl.put('click', () => {
             if (saveCallback) {
-                let copied = CopyObject.viaJson(stepOnOpen);
-                if (copied.key) {
-                    copied.key = 'Random'+Math.floor(Math.random()*100);
-                }
+                let copied = CopyObject.viaJson(detailsFormCtl.getValue());
                 saveCallback(stepOnOpen, copied);
                 stepEditBoxCtl.close();
             }
@@ -506,8 +514,6 @@ class UIComponents {
             let inputPair = inputByType(key, meta[key]);
             inputs.push(inputPair);
             inputsToKey[key] = inputPair;
-
-            let [_, inputCtl] = inputPair;
         }
 
         let [box, boxCtl] = ui.box();
@@ -596,15 +602,21 @@ class UIComponents {
         box.classList.add('wizard');
         let [execButton, execCtl] = ui.submitButton('Execute');
 
-        execCtl.put('click', () => {console.log('execute clicked');});
-
         let currentPtp;
-
         let actionHandler;
+
+        let onExec;
+        execCtl.put('click', () => { if (onExec) onExec(currentPtp) });
+
+
         let control = {
             setActionHandler(x) {
                 actionHandler = x;
             }, 
+
+            setOnExec(x) {
+                onExec = x;
+            },
             
             load(ptpInput) {
                 currentPtp = ptpInput;
@@ -719,16 +731,7 @@ class UIComponents {
         boxCtl.add(sampler);
 
         let [sendSample, sendSampleCtl] = ui.submitButton('Check sample', samplerCtl.input);
-        sendSampleCtl.put('click', async () => {
-            const payload = samplerCtl.value();
-            const resp = await Comm.send('sample', { sample: payload })
-            if (resp.failed) {
-                rawDisplayCtl.show(`Failed: ${resp.failed}`);
-            }
-            else {
-                rawDisplayCtl.show('Success', resp);
-            }
-        })
+        sendSampleCtl.put('click', evaluateSampler);
         boxCtl.add(sendSample);
 
         let [rawDisplay, rawDisplayCtl] = ui.rawDisplay();
@@ -745,9 +748,7 @@ class UIComponents {
             { call: 'arrayJoin', 'key': ' > ' }
         ]);
 
-        let [evaluateBox, evaluateCtl] = ui.submitButton("Evaluate", jsonInputCtl.textarea);
-        boxCtl.add(evaluateBox);
-        evaluateCtl.put('click', async () => {
+        async function evaluateSampler() {
             const ptp = jsonInputCtl.asJson();
             if (wizardCtl) {
                 wizardCtl.load(ptp);
@@ -755,9 +756,15 @@ class UIComponents {
             const source = samplerCtl.value();
             const result = await Comm.send('evaluate', { ptp, source });
             rawDisplayCtl.show('Success', result);
-        });
+        }
 
-        return [box];
+        let devCtl = {
+            fill(src) {
+                jsonInputCtl.textarea.value = src;
+            }
+        }
+
+        return [box, devCtl];
     }
 }
 
