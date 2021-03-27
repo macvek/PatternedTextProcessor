@@ -734,9 +734,17 @@ class UIComponents {
         sendSampleCtl.put('click', evaluateSampler);
         boxCtl.add(sendSample);
 
+        let resultBox = document.createElement("pre")
+        resultBox.style.color='red';
+        boxCtl.add(resultBox);
+        function showResult(text) {
+            resultBox.innerText = text;
+        }
+
         let [rawDisplay, rawDisplayCtl] = ui.rawDisplay();
         boxCtl.add(rawDisplay);
 
+        
         let [jsonInput, jsonInputCtl] = ui.jsonInput('PTP for Evaluation');
         boxCtl.add(jsonInput);
         jsonInputCtl.textarea.value = JSON.stringify([
@@ -756,6 +764,7 @@ class UIComponents {
             const source = samplerCtl.value();
             const result = await Comm.send('evaluate', { ptp, source });
             rawDisplayCtl.show('Success', result);
+            showResult(result.result);
         }
 
         let devCtl = {
@@ -799,7 +808,7 @@ class SelectionHandler {
             let handler = this.handlers.get(subject);
             if (!handler) {
                 log.error('missing handler', subject);
-                throw 'missng handler; detail in log';
+                throw 'missing handler; detail in log';
             }
 
             this.selected.add(subject);
