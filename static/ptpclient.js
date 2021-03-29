@@ -638,25 +638,24 @@ class UIComponents {
                     }
                 })
 
-                for (let step of ptpInput) {
-                    boxCtl.add(boxForCall(step, toolkitCtl));
+                
+                let boxes = extendableListOfBoxes(ptpInput, toolkitCtl)
+                for (let box of boxes) {
+                    boxCtl.add(box);
                 }
-                let self = this;
-                boxCtl.add(boxWithNewButton(
-                    (newStep) => {
-                        let rootCopy = CopyObject.viaJson(ptpInput);
-                        rootCopy.push(newStep);
-                        self.load(rootCopy);
-                    }
-                ));
-
+            
                 boxCtl.add(execButton);
 
             },
 
             replace(prev,saved) {
-                let withReplacement = CopyObject.replaceLeaf(currentPtp, prev,saved);
-                this.load(withReplacement);
+                if (prev === currentPtp) {
+                    this.load(saved);
+                }
+                else {
+                    let withReplacement = CopyObject.replaceLeaf(currentPtp, prev,saved);
+                    this.load(withReplacement);
+                }
             },
 
             updateKey(box,key,newValue) {
@@ -678,6 +677,22 @@ class UIComponents {
         box.style.position = 'relative';
         
         return [box, control];
+
+        function extendableListOfBoxes(parent, toolkitCtl, level=0) {
+            let boxes = [];
+            for (let step of parent) {
+                boxes.push(boxForCall(step, toolkitCtl, level));
+            }
+
+            boxes.push(boxWithNewButton(
+                (newStep) => {
+                    let parentCopy = CopyObject.viaJson(parent);
+                    parentCopy.push(newStep);
+                    control.replace(parent, parentCopy);
+                }
+            , level));
+            return boxes;
+        }
 
         function boxWithNewButton(boxModifyCallback, level = 0) {
             let stepBox = makeStepBox(level);
