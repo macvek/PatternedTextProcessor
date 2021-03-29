@@ -463,6 +463,8 @@ class UIComponents {
             detailsBoxCtl.clear();
             let [formDOM, formCtl] = self.dynamicForm(loadModel(type)); 
             detailsFormCtl = formCtl;
+            detailsFormCtl.setValue({call:type});
+
             detailsBoxCtl.add(formDOM);
         }
 
@@ -584,7 +586,10 @@ class UIComponents {
                 let ret = {};
                 for (let key in inputsToKey) {
                     let [_, fieldCtl] = inputsToKey[key];
-                    ret[key] = fieldCtl.getValue();
+                    if (fieldCtl) {
+                        // writable control only has fieldCtl
+                        ret[key] = fieldCtl.getValue();
+                    }
                 }
 
                 return ret;
