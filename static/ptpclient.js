@@ -768,18 +768,40 @@ class UIComponents {
         }
 
         function stepDetails(step) {
-            let details;
-            switch (step.call) {
-                case 'arraySplit': details = `key=${showArg(step.key)}`; break;
-                case 'store': details = `key=${showArg(step.key)}`; break;
-                case 'arrayPick': details = `idx=${showArg(step.idx)}`; break;
-                case 'array': details = `array=${showArg(step.array)}`; break;
-                case 'arrayJoin': details = `key=${showArg(step.key)}`; break;
-                case 'return': details = `key=${showArg(step.key)}`; break;
-                default:
-                    details = `UNKNOWN STEP ${step.call}`
-            }
+            let details = detailsText();
             return `${step.call}; ${details}`;
+
+            function detailsText() {
+                switch (step.call) {
+                    case 'pad': return `key=${showArg(step.key)} ${showArg(step.left)} ${showArg(step.align)}`;
+                    
+                    case 'iterateArrayValues': 
+                    case 'array': 
+                        return `key=${showArg(step.array)}`;
+                    
+                    case 'upper':
+                    case 'lower':
+                    case 'trim':
+                        return '';
+                    
+                    case 'format': 
+                    case 'return':
+                    case 'arrayJoin':
+                    case 'arraySplit':
+                    case 'indexOf':
+                        return `key=${showArg(step.key)}`;
+
+                    case 'store': 
+                        return `key=${showArg(step.key)}`;
+                    
+                    case 'arrayPick':
+                    case 'indexedSplit' : 
+                        return `key=${showArg(step.idx)}`;
+                
+                    default:
+                        details = `UNKNOWN STEP ${step.call}`
+                }
+            }
         }
 
         function showArg(it) {
