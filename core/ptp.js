@@ -55,7 +55,9 @@ class FlowWalker {
             case 'trim': return this.opTrim(op, input);
             case 'format': return this.opFormat(op, input);
             case 'return': return this.opReturn(op, input);
+            case 'passInput': return this.opPassInput(op, input);
             case 'store': return this.opStore(op, input);
+            case 'storeInput': return this.opStoreInput(op, input);
             case 'indexOf' : return this.opIndexOf(op, input);
             case 'indexedSplit' : return this.opIndexedSplit(op, input);
             case 'arraySplit' : return this.opArraySplit(op, input);
@@ -170,6 +172,10 @@ class FlowWalker {
         return this.resolve(op, 'key');
     }
 
+    opPassInput(op, input) {
+        return input;
+    }
+
     opTrim(op, input) {
         return input.trim();
     }
@@ -188,6 +194,13 @@ class FlowWalker {
 
         let result = this.callCmd(source, input);
         this.store(key, result);
+
+        return input;
+    }
+
+    opStoreInput(op, input) {
+        let key = this.resolveRaw(op, 'key');
+        this.store(key, input);
 
         return input;
     }

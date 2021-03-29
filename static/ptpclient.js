@@ -44,6 +44,7 @@ async function startPTP() {
     stepEditBoxCtl.onSave( (prev, saved) => {
         wizardCtl.replace(prev,saved);
     });
+    wizardCtl.load([]);
 }
 
 class UI {
@@ -87,6 +88,16 @@ class UI {
         ctl.getValue = () => {
             let proxied = origGetValue.apply(this);
             return 1*proxied;
+        }
+        return [dom,ctl];
+    }
+
+    labeledArraybox(caption) {
+        let [dom, ctl] = this.labeledTextbox(caption);
+        let origGetValue = ctl.getValue;
+        ctl.getValue = () => {
+            let proxied = origGetValue.apply(this);
+            return proxied.split(',');
         }
         return [dom,ctl];
     }
@@ -402,7 +413,9 @@ class UIComponents {
         listboxCtl.add('trim', formForType);
         listboxCtl.add('format', formForType);
         listboxCtl.add('return', formForType);
+        listboxCtl.add('passInput', formForType);
         listboxCtl.add('store', formForType);
+        listboxCtl.add('storeInput', formForType);
         listboxCtl.add('indexOf', formForType);
         listboxCtl.add('indexedSplit', formForType);
         listboxCtl.add('arraySplit', formForType);
@@ -473,12 +486,18 @@ class UIComponents {
                 case 'pad': return { key:'string', length:'number', align: {complex:'list', values:['left','right','center']} };
                 
                 case 'iterateArrayValues': 
+                    return { 
+                        '@base': {
+                            'array':[],
+                        },
+                        'Fill steps in wizard': 'label',};
                 case 'array': 
                     return { array: 'array'};
                 
                 case 'upper':
                 case 'lower':
                 case 'trim':
+                case 'passInput':
                     return {'No properties' : 'label'};
                 
                 case 'format': 
@@ -486,6 +505,9 @@ class UIComponents {
                 case 'arrayJoin':
                 case 'arraySplit':
                 case 'indexOf':
+                    return { key:'string'}
+
+                case 'storeInput': 
                     return { key:'string'}
 
                 case 'store': 
@@ -515,9 +537,15 @@ class UIComponents {
         meta.call = 'pass';
 
         for (let key in meta) {
+            if (key.startsWith('@')) {continue;}
             let inputPair = inputByType(key, meta[key]);
             inputs.push(inputPair);
             inputsToKey[key] = inputPair;
+        }
+
+        let baseValue = {};
+        if (meta['@base']) {
+            baseValue = meta['@base'];
         }
 
         let [box, boxCtl] = ui.box();
@@ -549,7 +577,7 @@ class UIComponents {
                 case 'pass': return passCtl();
                 case 'string': return ui.labeledTextbox(title);
                 case 'number': return ui.labeledNumberbox(title);
-                case 'array': return ui.labeledTextbox(title);
+                case 'array': return ui.labeledArraybox(title);
                 case 'list': return ui.labeledTextbox(title);
                 case 'label': return ui.label(title);
                 default:
@@ -583,7 +611,7 @@ class UIComponents {
                 }
             },
             getValue() {
-                let ret = {};
+                let ret = CopyObject.viaJson(baseValue);
                 for (let key in inputsToKey) {
                     let [_, fieldCtl] = inputsToKey[key];
                     if (fieldCtl) {
@@ -753,6 +781,12 @@ class UIComponents {
                 }
                 stepBox.appendChild(sourceBox);
             }
+            else if (step.call =='iterateArrayValues') {
+                let childBoxes = extendableListOfBoxes(step.array, toolkitCtl, level+1);
+                for (let each of childBoxes) {
+                    stepBox.appendChild(each);
+                }
+            }
 
             function clickHandler(e) {
                 selection.clickedOn(callBox,e);
@@ -788,15 +822,16 @@ class UIComponents {
 
             function detailsText() {
                 switch (step.call) {
-                    case 'pad': return `key=${showArg(step.key)} ${showArg(step.left)} ${showArg(step.align)}`;
+                    case 'pad': return `key=${showArg(step.key)} length=${showArg(step.length)} align=${showArg(step.align)}`;
                     
-                    case 'iterateArrayValues': 
                     case 'array': 
-                        return `key=${showArg(step.array)}`;
-                    
+                        return `array=${showArg(step.array)}`;
+
+                    case 'iterateArrayValues': 
                     case 'upper':
                     case 'lower':
                     case 'trim':
+                    case 'passInput':
                         return '';
                     
                     case 'format': 
@@ -806,6 +841,7 @@ class UIComponents {
                     case 'indexOf':
                         return `key=${showArg(step.key)}`;
 
+                    case 'storeInput': 
                     case 'store': 
                         return `key=${showArg(step.key)}`;
                     
@@ -814,7 +850,7 @@ class UIComponents {
                         return `key=${showArg(step.idx)}`;
                 
                     default:
-                        details = `UNKNOWN STEP ${step.call}`
+                        return `UNKNOWN STEP ${step.call}`
                 }
             }
         }
@@ -881,8 +917,9 @@ class UIComponents {
         }
 
         let devCtl = {
-            fill(src) {
+            async fill(src) {
                 jsonInputCtl.textarea.value = src;
+                evaluateSampler();
             }
         }
 

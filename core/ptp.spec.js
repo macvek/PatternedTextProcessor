@@ -8,8 +8,10 @@ if (require.main == module) {
         applyFlow,
         checkIndexOf,
         checkReturn,
+        checkStoreInput,
         checkStorePassesInput,
         checkStoreReturnsArg,
+        checkSimplePass,
         checkPassingArg,
         checkFormat,
         checkTrim,
@@ -167,6 +169,25 @@ function checkStorePassesInput(check) {
     check({'assertEquals': ['Variable value', ptp.lastWalker.variablesStore.get('$myVar1')]});
 }
 
+function checkStoreInput(check) {
+    let ptp = new PTP([
+        {'call':'storeInput', 'key' : '$myVar1'},
+    ]);
+
+    check({'assertEquals': ['shouldPass', ptp.parseInput('shouldPass')]});
+    check({'assertEquals': ['shouldPass', ptp.lastWalker.variablesStore.get('$myVar1')]});
+}
+
+function checkSimplePass(check) {
+    let ptp = new PTP([
+        {'call':'store', 'key' : '$myVar1', 'source': {'call' : 'passInput'}},
+        {'call':'store', 'key' : '$myVar2', 'source': {'call' : 'passInput'}},
+    ]);
+
+    check({'assertEquals': ['shouldPass', ptp.parseInput('shouldPass')]});
+    check({'assertEquals': ['shouldPass', ptp.lastWalker.variablesStore.get('$myVar1')]});
+    check({'assertEquals': ['shouldPass', ptp.lastWalker.variablesStore.get('$myVar2')]});
+}
 
 function checkReturn(fail) {
     let ptp = new PTP([
