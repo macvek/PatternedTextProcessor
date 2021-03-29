@@ -22,6 +22,8 @@ async function startPTP() {
         switch(name) {
             case 'edit': 
                 return stepEditBoxCtl.open(steps);
+            case 'delete':
+                return wizardCtl.delete(steps);
             default:
                 console.log(`not supported yet ${name}`);
         }
@@ -634,6 +636,15 @@ class UIComponents {
                 for (let step of ptpInput) {
                     boxCtl.add(boxForCall(step, toolkitCtl));
                 }
+                let self = this;
+                boxCtl.add(boxWithNewButton(
+                    (newStep) => {
+                        let rootCopy = CopyObject.viaJson(ptpInput);
+                        rootCopy.push(newStep);
+                        self.load(rootCopy);
+                    }
+                ));
+
                 boxCtl.add(execButton);
 
             },
@@ -641,6 +652,21 @@ class UIComponents {
             replace(prev,saved) {
                 let withReplacement = CopyObject.replaceLeaf(currentPtp, prev,saved);
                 this.load(withReplacement);
+            },
+
+            updateKey(box,key,newValue) {
+                let withNewLeaf = CopyObject.putLeafAsKey(currentPtp, box, key, newValue);
+                this.load(withNewLeaf);
+
+            },
+
+            delete(steps) {
+                let withDeleted = currentPtp;
+                for (let each of steps) {
+                    withDeleted = CopyObject.deleteLeaf(withDeleted, each);
+                }
+                
+                this.load(withDeleted);
             }
         }
 
@@ -648,20 +674,34 @@ class UIComponents {
         
         return [box, control];
 
-        function boxForCall(step, toolkitCtl, level = 0) {
-            let stepBox = document.createElement('div');
-            if (level > 0) {
-                stepBox.style.marginLeft = 10 * level + 'px';
-            }
-            let callBox = document.createElement('div');
-            let label = document.createElement('div');
-            callBox.appendChild(label);
-            let callLabel = stepDetails(step);
+        function boxWithNewButton(boxModifyCallback, level = 0) {
+            let stepBox = makeStepBox(level);
 
-            label.innerText = callLabel;
-            label.classList.add('callbox-label');
-            callBox.classList.add('callbox');
+            let newBtnBox = document.createElement('div');
+            let clickMe = document.createElement('button');
+            newBtnBox.appendChild(clickMe);
+            let callLabel = "+";
+
+            clickMe.innerText = callLabel;
+            clickMe.classList.add('callbox-label');
+            clickMe.addEventListener('click', () => {
+                let newCall =  {'call': 'return', 'key':`I'm a new block`}
+                boxModifyCallback(newCall);
+            });
+            newBtnBox.classList.add('callbox', 'callbox-newbtn');
+
+            stepBox.appendChild(newBtnBox);
+            return stepBox;
+        }
+
+        function boxForCall(step, toolkitCtl, level = 0) {
+            let stepBox = makeStepBox(level);
+
+            let callBox = makeCallBox(step);
+            
             callBox.addEventListener('click',clickHandler);
+            stepBox.appendChild(callBox);
+
             selection.whenSelected(callBox, (flag) => {
                 if (flag) {
                     callBox.classList.add('callbox-selected');
@@ -677,11 +717,20 @@ class UIComponents {
                 toolkitCtl.surround(Array.from(selection.loadSelected()));
             });
 
-            stepBox.appendChild(callBox);
+            
 
             if (step.call === 'store') {
                 let source = step.source;
-                let sourceBox = boxForCall(source, toolkitCtl, level + 1);
+                let sourceBox;
+                if (source != null) {
+                    sourceBox = boxForCall(source, toolkitCtl, level + 1);
+                }
+                else {
+                    sourceBox = boxWithNewButton(
+                        (newStep) => control.updateKey(step,'source',newStep),
+                        level+1
+                    );
+                }
                 stepBox.appendChild(sourceBox);
             }
 
@@ -692,6 +741,27 @@ class UIComponents {
             return stepBox;
         }
 
+        function makeStepBox(level) {
+            let stepBox = document.createElement('div');
+            if (level > 0) {
+                stepBox.style.marginLeft = 10 * level + 'px';
+            }
+            return stepBox;
+        }
+
+        function makeCallBox(step) {
+            let callBox = document.createElement('div');
+            let label = document.createElement('div');
+            callBox.appendChild(label);
+            let callLabel = stepDetails(step);
+
+            label.innerText = callLabel;
+            label.classList.add('callbox-label');
+            callBox.classList.add('callbox');
+            
+            return callBox;
+        }
+
         function stepDetails(step) {
             let details;
             switch (step.call) {
@@ -700,6 +770,7 @@ class UIComponents {
                 case 'arrayPick': details = `idx=${showArg(step.idx)}`; break;
                 case 'array': details = `array=${showArg(step.array)}`; break;
                 case 'arrayJoin': details = `key=${showArg(step.key)}`; break;
+                case 'return': details = `key=${showArg(step.key)}`; break;
                 default:
                     details = `UNKNOWN STEP ${step.call}`
             }
@@ -918,6 +989,73 @@ class CopyObject {
                 }
                 else if (deepCandidate(value)) {
                     let ret = deepReplace(value);
+                    if (ret) {
+                        return ret;
+                    }
+                }
+            }
+        }
+
+        function deepCandidate(it) {
+            return Array.isArray(it) || typeof it === 'object';
+        }
+       
+    }
+
+    static putLeafAsKey(root, keyParent, key, value) {
+        return CopyObject.deepMapStructure(root, keyParent, 
+            (host, hostKey, _) => {
+                let foundRoot = host[hostKey];
+                let copied = CopyObject.viaJson(foundRoot);
+                copied[key] = value;
+
+                host[hostKey] = copied;
+            },
+            (host, key, prevValue) => {
+                host[key] = prevValue;
+            }
+        );
+    }
+
+    static deleteLeaf(root, toDelete) {
+        return CopyObject.deepMapStructure(root, toDelete, 
+            (host, key, _) => {
+                if (Array.isArray(host)) {
+                    host.splice(key,1);
+                }
+                else {
+                    delete host[key];
+                }
+            },
+            (host, key, prevValue) => {
+                if (Array.isArray(host)) {
+                    host.splice(key,0,prevValue);
+                }
+                else {
+                    host[key] = prevValue;
+                }
+            });
+    }
+
+    static deepMapStructure(root, valueToMap, applyMap, revertMap) {
+        if (deepCandidate(root)) {
+            return deepMap(root);
+        }
+        else {
+            return CopyObject.viaJson(root);
+        }
+
+        function deepMap(curr) {
+            for (let eachKey in curr) {
+                let value = curr[eachKey];
+                if (value === valueToMap) {
+                    applyMap(curr, eachKey, valueToMap);
+                    let retVal = CopyObject.viaJson(root);
+                    revertMap(curr, eachKey, valueToMap);
+                    return retVal;
+                }
+                else if (deepCandidate(value)) {
+                    let ret = deepMap(value);
                     if (ret) {
                         return ret;
                     }
