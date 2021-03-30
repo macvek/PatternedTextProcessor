@@ -57,13 +57,20 @@ class UI {
         return [span];
     }
 
-    labeledTextbox(caption) {
+    labeledTextbox(caption, useTextArea=false) {
         let overlap = document.createElement('div');
         let label = document.createElement('label');
         label.innerHTML = caption;
 
-        let input = document.createElement('input');
-        input.classList.add('labeled-input');
+        let input;
+        if (useTextArea) {
+            input = document.createElement('textarea');
+            input.classList.add('labeled-textarea');
+        }
+        else {
+            input = document.createElement('input');
+            input.classList.add('labeled-input');
+        }   
 
         overlap.appendChild(label);
         overlap.appendChild(input);
@@ -93,7 +100,7 @@ class UI {
     }
 
     labeledArraybox(caption) {
-        let [dom, ctl] = this.labeledTextbox(caption);
+        let [dom, ctl] = this.labeledTextbox(caption, true);
         let origGetValue = ctl.getValue;
         ctl.getValue = () => {
             let proxied = origGetValue.apply(this);
@@ -433,15 +440,21 @@ class UIComponents {
         let detailsFormCtl;
 
         let [saveButton,saveButtonCtl] = ui.submitButton('Save');
+        let [closeButton,closeButtonCtl] = ui.submitButton('Close');
         saveButtonCtl.put('click', () => {
             if (saveCallback) {
                 let copied = CopyObject.viaJson(detailsFormCtl.getValue());
                 saveCallback(stepOnOpen, copied);
                 stepEditBoxCtl.close();
             }
-        })
+        });
+
+        closeButtonCtl.put('click', () => {
+            stepEditBoxCtl.close();
+        });
         
         editBoxCtl.add(saveButton);
+        editBoxCtl.add(closeButton);
 
         let saveCallback;
         let stepEditBoxCtl = {
